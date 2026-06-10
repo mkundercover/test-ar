@@ -19,38 +19,8 @@ function init() {
     scene.add(light);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
-    container.appendChild(renderer.domElement);
-
-    document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
-
-    const loader = new GLTFLoader();
-    loader.load('./assets/models/animated_butterfly_fucsia.glb', (gltf) => {
-        const butterfly = gltf.scene;
-        butterfly.scale.set(0.1, 0.1, 0.1);
-        scene.add(butterfly);
-        
-        if (gltf.animations.length > 0) {
-            const mixer = new THREE.AnimationMixer(butterfly);
-            gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
-        }
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }) as THREE.WebGLRenderer;
+    (renderer as any).setAnimationLoop((timestamp: number, frame: any) => {
+        renderer.render(scene, camera);
     });
 
-    window.addEventListener('resize', onWindowResize, false);
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    if (renderer) renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-init();
-
-if (renderer !== null) {
-    renderer.setAnimationLoop((timestamp: number, frame: any) => {
-        renderer?.render(scene, camera);
-    });
-}
