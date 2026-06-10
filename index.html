@@ -8,33 +8,28 @@
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <style>
-      body, html { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+      body, html { margin: 0; width: 100%; height: 100%; overflow: hidden; background: black; }
       #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background: rgba(0,0,0,0.8); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; }
       #start-btn { padding: 20px 40px; font-size: 24px; cursor: pointer; }
+      #debug-log { position: absolute; bottom: 10px; left: 10px; color: white; z-index: 100000; font-family: monospace; }
       .hidden { display: none !important; }
     </style>
   </head>
   <body>
     <div id="overlay">
         <button id="start-btn">AVVIA AR</button>
-        <div id="calibration-msg" class="hidden">Metti il telefono dritto per iniziare</div>
+        <div id="calibration-msg" class="hidden">Metti il telefono dritto per iniziare<br><span id="debug-log"></span></div>
     </div>
     
-    <!-- Camera feed come background -->
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;">
       <a-assets>
         <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
       </a-assets>
-      
-      <!-- Camera fornita da AR.js -->
       <a-camera></a-camera>
-      
-      <!-- Sciame posizionato nel mondo (World Space) -->
       <a-entity id="swarm" position="0 0 -5"></a-entity>
     </a-scene>
 
     <script>
-        // Sciame logic embedded here
         AFRAME.registerComponent('butterfly-color', {
           schema: { color: { type: 'color', default: '#ce0058' } },
           init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -56,9 +51,28 @@
         document.getElementById('start-btn').addEventListener('click', () => {
             document.getElementById('start-btn').classList.add('hidden');
             document.getElementById('calibration-msg').classList.remove('hidden');
-            // Avvio simulato o effettivo
-            const swarm = document.querySelector('#swarm');
-            createSwarm(swarm);
+        });
+
+        window.addEventListener('load', () => {
+          const swarm = document.querySelector('#swarm');
+          const camera = document.querySelector('a-camera');
+          const overlay = document.getElementById('overlay');
+          const debugLog = document.getElementById('debug-log');
+
+          setInterval(() => {
+            if (window.experienceActivated) return;
+            if (camera && camera.object3D) {
+              const rotation = camera.getAttribute('rotation');
+              debugLog.innerText = "Pitch: " + Math.round(rotation.x);
+              
+              // RILASSATO: Pitch tra -45 e 45 gradi
+              if (rotation && Math.abs(rotation.x) < 45) {
+                window.experienceActivated = true;
+                overlay.classList.add('hidden'); 
+                createSwarm(swarm);
+              }
+            }
+          }, 200);
         });
 
         function createSwarm(swarmContainer) {
@@ -70,10 +84,7 @@
             butterfly.setAttribute('animation-mixer', 'clip: Flying');
             butterfly.setAttribute('scale', '0.2 0.2 0.2');
             butterfly.setAttribute('butterfly-color', 'color: #ce0058');
-            
-            // Posizionamento casuale nel volume del tunnel
             butterfly.setAttribute('position', `${(Math.random()-0.5)*tunnelLength} ${Math.random()*3} ${(Math.random()-0.5)*10 - 5}`);
-            
             swarmContainer.appendChild(butterfly);
           }
         }
