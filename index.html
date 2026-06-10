@@ -1,62 +1,68 @@
 <!DOCTYPE html>
 <html lang="it">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Ondulkart AR</title>
+    <!-- Librerie -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
     <style>
-      body { margin: 0; height: 100vh; overflow: hidden; background: #000; }
-      #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-      #start-btn { padding: 20px 40px; font-size: 24px; cursor: pointer; }
+        body, html { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        .view-container { display: none; width: 100%; height: 100%; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background: #000; color: white; display: flex; align-items: center; justify-content: center; }
+        #start-btn { padding: 20px 40px; font-size: 24px; cursor: pointer; }
     </style>
-  </head>
-  <body>
-    <div id="ui-layer">
-        <button id="start-btn">AVVIA AR PURA</button>
+</head>
+<body>
+    <div id="overlay">
+        <button id="start-btn">AVVIA ESPERIENZA</button>
     </div>
-    <script type="module">
-        import * as THREE from 'https://cdn.skypack.dev/three@0.158.0';
-        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
-        import { ARButton } from 'https://cdn.skypack.dev/three@0.158.0/examples/jsm/webxr/ARButton.js';
+    
+    <!-- iOS View (Nativa) -->
+    <div id="ios-view" class="view-container">
+        <model-viewer src="assets/models/animated_butterfly_fucsia.glb" ar ar-modes="quick-look" camera-controls style="width:100%; height:100%"></model-viewer>
+    </div>
+    
+    <!-- Android View (A-Frame) -->
+    <div id="android-view" class="view-container">
+        <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+            <a-assets>
+                <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
+            </a-assets>
+            <a-camera></a-camera>
+            <a-entity id="swarm"></a-entity>
+        </a-scene>
+    </div>
+    
+    <script>
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const overlay = document.getElementById('overlay');
 
-        let scene, camera, renderer, swarm = [];
-
-        document.getElementById('start-btn').addEventListener('click', async () => {
-            document.getElementById('ui-layer').style.display = 'none';
-            initAR();
+        document.getElementById('start-btn').addEventListener('click', () => {
+            overlay.style.display = 'none';
+            if (isIOS) {
+                document.getElementById('ios-view').style.display = 'block';
+            } else {
+                document.getElementById('android-view').style.display = 'block';
+                // Inizializzazione Sciame Android
+                const swarm = document.querySelector('#swarm');
+                createSwarm(swarm);
+            }
         });
 
-        function initAR() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.xr.enabled = true;
-            document.body.appendChild(renderer.domElement);
-
-            document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
-
-            const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-            scene.add(light);
-
-            const loader = new GLTFLoader();
-            loader.load('assets/models/animated_butterfly_fucsia.glb', (gltf) => {
-                for (let i = 0; i < 50; i++) {
-                    const b = gltf.scene.clone();
-                    b.position.set((Math.random()-0.5)*28, Math.random()*2+1, -Math.random()*10 - 2);
-                    scene.add(b);
-                    swarm.push(b);
-                }
-            });
-
-            renderer.setAnimationLoop((timestamp, frame) => {
-                swarm.forEach(b => {
-                    b.position.x -= 0.05;
-                    if (b.position.x < -14) b.position.x = 14;
-                });
-                renderer.render(scene, camera);
-            });
+        function createSwarm(swarmContainer) {
+          const numButterflies = 50;
+          for (let i = 0; i < numButterflies; i++) {
+            let butterfly = document.createElement('a-entity');
+            butterfly.setAttribute('gltf-model', '#butterflyModel');
+            butterfly.setAttribute('animation-mixer', 'clip: Flying');
+            butterfly.setAttribute('scale', '0.2 0.2 0.2');
+            butterfly.setAttribute('position', `${(Math.random()-0.5)*28} ${Math.random()*3} -5`);
+            swarmContainer.appendChild(butterfly);
+          }
         }
     </script>
-  </body>
+</body>
 </html>
