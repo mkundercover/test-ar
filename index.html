@@ -1,41 +1,130 @@
 <!DOCTYPE html>
 <html lang="it">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Ondulkart AR</title>
+    <!-- A-Frame e AR.js -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
     <style>
-      body, html { margin: 0; height: 100%; overflow: hidden; background: black; }
-      #ios-view, #android-view { display: none; width: 100%; height: 100%; }
-      #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: rgba(0,0,0,0.8); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-      #start-btn { padding: 20px 40px; font-size: 24px; pointer-events: auto; }
-      .hidden { display: none !important; }
+        body, html { margin: 0; width: 100%; height: 100%; overflow: hidden; background: black; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background: rgba(0,0,0,0.8); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #start-btn { padding: 20px 40px; font-size: 24px; cursor: pointer; }
+        .hidden { display: none !important; }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div id="overlay">
         <div id="status-msg"><button id="start-btn">AVVIA AR</button></div>
         <div id="calibration-msg" class="hidden">Metti il telefono dritto per iniziare</div>
     </div>
     
-    <div id="ios-view">
-        <model-viewer src="./assets/models/animated_butterfly_fucsia.glb" ar ar-modes="quick-look" camera-controls style="width:100%; height:100%"></model-viewer>
-    </div>
-    
-    <div id="android-view">
-        <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;">
-          <a-assets>
-            <a-asset-item id="butterflyModel" src="./assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
-          </a-assets>
-          <a-entity id="main-camera" camera wasd-controls look-controls position="0 1.6 0"></a-entity>
-          <a-entity id="swarm"></a-entity>
-        </a-scene>
-    </div>
-    
-    <script type="module" src="src/main.ts"></script>
-  </body>
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+      <a-assets>
+        <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
+      </a-assets>
+      <a-entity id="main-camera" camera wasd-controls look-controls position="0 1.6 0"></a-entity>
+      <a-entity id="swarm"></a-entity>
+    </a-scene>
+
+    <script>
+        // 1. Registrazione Componente
+        AFRAME.registerComponent('butterfly-color', {
+          schema: { color: { type: 'color', default: '#ce0058' } },
+          init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
+          update: function () { this.applyColor(); },
+          applyColor: function () {
+            const mesh = this.el.getObject3D('mesh');
+            if (!mesh) return;
+            const newColor = new THREE.Color(this.data.color);
+            newColor.convertSRGBToLinear();
+            mesh.traverse((node) => {
+              if (node.isMesh && node.material && node.material.name === 'Wings') {
+                node.material.color.copy(newColor);
+                node.material.emissive.copy(newColor); 
+                node.material.emissiveIntensity = 15;        
+              }
+            });
+          }
+        });
+
+        let sensorsActive = false;
+        let experienceActivated = false;
+
+        function proceed() {
+          sensorsActive = true;
+          document.getElementById('status-msg').classList.add('hidden');
+          document.getElementById('calibration-msg').classList.remove('hidden');
+        }
+
+        document.getElementById('start-btn').addEventListener('click', proceed);
+
+        window.addEventListener('load', () => {
+          const swarm = document.querySelector('#swarm');
+          const camera = document.querySelector('#main-camera');
+          const overlay = document.querySelector('#overlay');
+
+          setInterval(() => {
+            if (!sensorsActive || experienceActivated) return;
+            if (camera && camera.object3D) {
+              const rotation = camera.getAttribute('rotation');
+              if (rotation && rotation.x > -25 && rotation.x < 25) {
+                experienceActivated = true;
+                overlay.classList.add('hidden'); 
+                createSwarm(swarm);
+              }
+            }
+          }, 200);
+        });
+
+        function createSwarm(swarmContainer) {
+          const numButterflies = 90;
+          const tunnelLength = 28; 
+          const tunnelWidth = 7.5;
+          const tunnelHeight = 3.3;
+          const groundOffset = 0.5;
+          const povDistance = 1;
+          const rows = 12; 
+          const cols = 13;
+          
+          let grid = [];
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              grid.push({ y: (r / (rows - 1)) * tunnelHeight + groundOffset, z: -((c / (cols - 1)) * tunnelWidth + povDistance) });
+            }
+          }
+          grid.sort(() => Math.random() - 0.5);
+
+          for (let i = 0; i < numButterflies; i++) {
+            let butterfly = document.createElement('a-entity');
+            const slot = grid[i % grid.length];
+            
+            butterfly.setAttribute('gltf-model', '#butterflyModel');
+            butterfly.setAttribute('animation-mixer', 'clip: Flying');
+            butterfly.setAttribute('scale', '0.2 0.15 0.2');
+            butterfly.setAttribute('butterfly-color', 'color: #ce0058');
+
+            const resetButterfly = (el, isFirstSpawn = false) => {
+              const startX = tunnelLength / 2;
+              const endX = -(tunnelLength / 2);
+              const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
+              const moveDuration = Math.random() * 4000 + 10000;
+              const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
+              const currentDuration = moveDuration * distanceRatio;
+
+              el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
+              el.setAttribute('rotation', '0 -90 0');
+              el.setAttribute('animation__move', { property: 'position', to: `${endX} ${slot.y} ${slot.z}`, dur: currentDuration, easing: 'linear' });
+              el.setAttribute('animation__color', { property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000', dur: currentDuration * 0.5, easing: 'linear', loop: false });
+            };
+
+            butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly, false));
+            swarmContainer.appendChild(butterfly);
+            resetButterfly(butterfly, true);
+          }
+        }
+    </script>
+</body>
 </html>
