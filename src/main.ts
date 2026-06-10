@@ -22,7 +22,7 @@ log("Script caricato.");
 
 let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
-let renderer: THREE.WebGLRenderer;
+let renderer: THREE.WebGLRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 
 function init() {
     log("Inizializzazione Three.js...");
@@ -33,7 +33,6 @@ function init() {
     light.position.set(0.5, 1, 0.25);
     scene.add(light);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.xr.enabled = true;
@@ -44,7 +43,8 @@ function init() {
     document.body.appendChild(button);
 
     const loader = new GLTFLoader();
-    const modelUrl = new URL('/assets/models/animated_butterfly_fucsia.glb', import.meta.url).href;
+    // Path relativo per garantire compatibilità con base path
+    const modelUrl = new URL('../assets/models/animated_butterfly_fucsia.glb', import.meta.url).href;
     log("Caricamento modello: " + modelUrl);
     loader.load(modelUrl, (gltf) => {
         log("Modello caricato!");
