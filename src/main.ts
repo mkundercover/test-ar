@@ -23,19 +23,16 @@ function init() {
     const button = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
     document.body.appendChild(button);
 
+// ... codice precedente ...
     const loader = new GLTFLoader();
-    loader.load('./assets/models/animated_butterfly_fucsia.glb', (gltf) => {
+    // Usa un percorso relativo che Vite dovrebbe risolvere correttamente con 'base'
+    const modelUrl = new URL('/assets/models/animated_butterfly_fucsia.glb', import.meta.url).href;
+    console.log("Tentativo di caricamento modello da:", modelUrl);
+    
+    loader.load(modelUrl, (gltf) => {
+        console.log("Modello caricato con successo!");
         const butterfly = gltf.scene;
-        butterfly.scale.set(0.1, 0.1, 0.1);
-        scene.add(butterfly);
-        
-        if (gltf.animations.length > 0) {
-            const mixer = new THREE.AnimationMixer(butterfly);
-            gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
-        }
-    }, undefined, (error) => {
-        console.error('An error happened', error);
-    });
+// ... resto del codice ...
 
     window.addEventListener('resize', onWindowResize, false);
 }
