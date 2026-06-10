@@ -18,7 +18,9 @@
   }
 });
 
-// 2. Logica Ibrida (iOS vs Android)
+let experienceRequested = false;
+
+// 2. Gestione Ibrida
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
 window.addEventListener('load', () => {
@@ -27,43 +29,26 @@ window.addEventListener('load', () => {
         document.getElementById('overlay')!.classList.add('hidden');
     } else {
         document.getElementById('android-view')!.style.display = 'block';
+        const startBtn = document.getElementById('start-btn');
+        const overlay = document.getElementById('overlay');
+        const swarm = document.querySelector('#swarm');
+        const scene = document.querySelector('a-scene');
+
+        startBtn!.addEventListener('click', () => {
+            experienceRequested = true;
+            overlay!.classList.add('hidden');
+        });
+
+        // Garantisce che lo sciame parta SOLO quando AR.js è pronto
+        scene!.addEventListener('arjs-video-loaded', () => {
+            if (experienceRequested) {
+                createSwarm(swarm!);
+            }
+        });
     }
 });
 
-// 3. Gestione Permessi (Android)
-(window as any).startExperience = function() {
-  const DeviceOrientationEvent = (window as any).DeviceOrientationEvent;
-  if (DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then((response: string) => {
-      if (response == 'granted') { proceed(); }
-    }).catch(console.error);
-  } else { 
-    proceed(); 
-  }
-}
-
-function proceed() {
-  document.getElementById('status-msg')!.classList.add('hidden');
-  document.getElementById('calibration-msg')!.classList.remove('hidden');
-  
-  // Avvio calibrazione
-  const camera = document.querySelector('#main-camera');
-  const overlay = document.querySelector('#overlay');
-  const swarm = document.querySelector('#swarm');
-
-  const checkCalibration = setInterval(() => {
-    if (camera && (camera as any).object3D) {
-      const rotation = camera.getAttribute('rotation');
-      if (rotation && rotation.x > -25 && rotation.x < 25) {
-        clearInterval(checkCalibration);
-        overlay!.classList.add('hidden'); 
-        createSwarm(swarm!);
-      }
-    }
-  }, 200);
-}
-
-// 4. Logica dello Sciame (Android)
+// 3. Logica dello Sciame (Android)
 function createSwarm(swarmContainer: Element) {
   const numButterflies = 90;
   const tunnelLength = 28; 
