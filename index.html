@@ -1,92 +1,46 @@
 <!DOCTYPE html>
 <html lang="it">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Ondulkart AR</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <style>
-      body, html { margin: 0; width: 100%; height: 100%; overflow: hidden; background: black; }
-      #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background: rgba(0,0,0,0.8); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-      #start-btn { padding: 20px 40px; font-size: 24px; cursor: pointer; }
-      #debug-log { position: absolute; bottom: 10px; left: 10px; color: white; z-index: 100000; font-family: monospace; }
-      .hidden { display: none !important; }
+        body, html { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        #start-btn { padding: 20px 40px; font-size: 24px; cursor: pointer; background: white; border: none; }
     </style>
-  </head>
-  <body>
-    <div id="overlay">
+</head>
+<body>
+    <div id="ui-layer">
         <button id="start-btn">AVVIA AR</button>
-        <div id="calibration-msg" class="hidden">Metti il telefono dritto per iniziare<br><span id="debug-log"></span></div>
     </div>
-    
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;">
-      <a-assets>
-        <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
-      </a-assets>
-      <a-camera></a-camera>
-      <a-entity id="swarm" position="0 0 -5"></a-entity>
-    </a-scene>
 
+    <!-- Script di caricamento sicuro -->
     <script>
-        AFRAME.registerComponent('butterfly-color', {
-          schema: { color: { type: 'color', default: '#ce0058' } },
-          init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
-          applyColor: function () {
-            const mesh = this.el.getObject3D('mesh');
-            if (!mesh) return;
-            const newColor = new THREE.Color(this.data.color);
-            newColor.convertSRGBToLinear();
-            mesh.traverse((node) => {
-              if (node.isMesh && node.material && node.material.name === 'Wings') {
-                node.material.color.copy(newColor);
-                node.material.emissive.copy(newColor); 
-                node.material.emissiveIntensity = 15;        
-              }
-            });
-          }
+        document.getElementById('start-btn').addEventListener('click', function() {
+            this.innerText = 'Caricamento...';
+            // Carica A-Frame solo quando richiesto
+            const script = document.createElement('script');
+            script.src = "https://aframe.io/releases/1.4.0/aframe.min.js";
+            script.onload = () => {
+                const arjs = document.createElement('script');
+                arjs.src = "https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js";
+                arjs.onload = () => {
+                    document.getElementById('ui-layer').style.display = 'none';
+                    // Qui inizieremo la scena dopo che gli script sono pronti
+                    initScene();
+                };
+                document.head.appendChild(arjs);
+            };
+            document.head.appendChild(script);
         });
 
-        document.getElementById('start-btn').addEventListener('click', () => {
-            document.getElementById('start-btn').classList.add('hidden');
-            document.getElementById('calibration-msg').classList.remove('hidden');
-        });
-
-        window.addEventListener('load', () => {
-          const swarm = document.querySelector('#swarm');
-          const camera = document.querySelector('a-camera');
-          const overlay = document.getElementById('overlay');
-          const debugLog = document.getElementById('debug-log');
-
-          setInterval(() => {
-            if (window.experienceActivated) return;
-            if (camera && camera.object3D) {
-              const rotation = camera.getAttribute('rotation');
-              debugLog.innerText = "Pitch: " + Math.round(rotation.x);
-              
-              // RILASSATO: Pitch tra -45 e 45 gradi
-              if (rotation && Math.abs(rotation.x) < 45) {
-                window.experienceActivated = true;
-                overlay.classList.add('hidden'); 
-                createSwarm(swarm);
-              }
-            }
-          }, 200);
-        });
-
-        function createSwarm(swarmContainer) {
-          const numButterflies = 50;
-          const tunnelLength = 28; 
-          for (let i = 0; i < numButterflies; i++) {
-            let butterfly = document.createElement('a-entity');
-            butterfly.setAttribute('gltf-model', '#butterflyModel');
-            butterfly.setAttribute('animation-mixer', 'clip: Flying');
-            butterfly.setAttribute('scale', '0.2 0.2 0.2');
-            butterfly.setAttribute('butterfly-color', 'color: #ce0058');
-            butterfly.setAttribute('position', `${(Math.random()-0.5)*tunnelLength} ${Math.random()*3} ${(Math.random()-0.5)*10 - 5}`);
-            swarmContainer.appendChild(butterfly);
-          }
+        function initScene() {
+            const scene = document.createElement('a-scene');
+            scene.setAttribute('embedded', '');
+            scene.setAttribute('arjs', 'sourceType: webcam;');
+            document.body.appendChild(scene);
+            alert('Scena A-Frame inizializzata');
         }
     </script>
 </body>
