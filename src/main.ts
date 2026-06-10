@@ -18,11 +18,19 @@
   }
 });
 
-// 2. Variabili di Stato
-let sensorsActive = false;
-let experienceActivated = false;
+// 2. Logica Ibrida (iOS vs Android)
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-// 3. Gestione Permessi
+window.addEventListener('load', () => {
+    if (isIOS) {
+        document.getElementById('ios-view')!.style.display = 'block';
+        document.getElementById('overlay')!.classList.add('hidden');
+    } else {
+        document.getElementById('android-view')!.style.display = 'block';
+    }
+});
+
+// 3. Gestione Permessi (Android)
 (window as any).startExperience = function() {
   const DeviceOrientationEvent = (window as any).DeviceOrientationEvent;
   if (DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -35,34 +43,27 @@ let experienceActivated = false;
 }
 
 function proceed() {
-  sensorsActive = true;
   document.getElementById('status-msg')!.classList.add('hidden');
   document.getElementById('calibration-msg')!.classList.remove('hidden');
-}
-
-// 4. Controllo Calibrazione e Attivazione
-window.addEventListener('load', () => {
-  const swarm = document.querySelector('#swarm');
+  
+  // Avvio calibrazione
   const camera = document.querySelector('#main-camera');
   const overlay = document.querySelector('#overlay');
+  const swarm = document.querySelector('#swarm');
 
-  setInterval(() => {
-    if (!sensorsActive || experienceActivated) return;
-
+  const checkCalibration = setInterval(() => {
     if (camera && (camera as any).object3D) {
       const rotation = camera.getAttribute('rotation');
-      
-      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
       if (rotation && rotation.x > -25 && rotation.x < 25) {
-        experienceActivated = true;
+        clearInterval(checkCalibration);
         overlay!.classList.add('hidden'); 
         createSwarm(swarm!);
       }
     }
   }, 200);
-});
+}
 
-// 5. Logica dello Sciame
+// 4. Logica dello Sciame (Android)
 function createSwarm(swarmContainer: Element) {
   const numButterflies = 90;
   const tunnelLength = 28; 
@@ -97,11 +98,9 @@ function createSwarm(swarmContainer: Element) {
     const resetButterfly = (el: any, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
-      
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
       
       const moveDuration = Math.random() * 4000 + 10000;
-      
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
