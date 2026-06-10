@@ -1,57 +1,55 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three-stdlib';
+import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 
-let scene: THREE.Scene;
+let container: HTMLDivElement;
 let camera: THREE.PerspectiveCamera;
+let scene: THREE.Scene;
 let renderer: THREE.WebGLRenderer;
+let controller: THREE.XRFrame;
 
-const setupScene = () => {
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+function init() {
+    container = document.createElement('div');
+    document.body.appendChild(container);
 
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(1, 1, 1);
-  scene.add(light);
-  scene.add(new THREE.AmbientLight(0x404040));
-};
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
-const loadButterfly = () => {
-  const loader = new GLTFLoader();
-  loader.load('/assets/models/animated_butterfly_fucsia.glb', (gltf) => {
-    const butterfly = gltf.scene;
-    butterfly.position.set(0, 0, -2); // Posizionato davanti all'utente
-    scene.add(butterfly);
-  });
-};
+    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+    light.position.set(0.5, 1, 0.25);
+    scene.add(light);
 
-const setupUI = () => {
-  const button = document.createElement('button');
-  button.innerText = 'Start AR';
-  button.style.position = 'absolute';
-  button.style.top = '50%';
-  button.style.left = '50%';
-  button.style.transform = 'translate(-50%, -50%)';
-  button.style.padding = '20px';
-  button.style.fontSize = '20px';
-  button.style.zIndex = '1000';
-  document.body.appendChild(button);
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    container.appendChild(renderer.domElement);
 
-  button.addEventListener('click', () => {
-    button.remove();
-    setupScene();
-    loadButterfly();
-    animate();
-  });
-};
+    document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
-const animate = () => {
-  requestAnimationFrame(animate);
-  renderer.render(scene, camera);
-};
+    const loader = new GLTFLoader();
+    loader.load('/assets/models/animated_butterfly_fucsia.glb', (gltf) => {
+        const butterfly = gltf.scene;
+        butterfly.scale.set(0.1, 0.1, 0.1);
+        scene.add(butterfly);
+        
+        // Animazione ciclica (se presente nel modello)
+        if (gltf.animations.length > 0) {
+            const mixer = new THREE.AnimationMixer(butterfly);
+            gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
+        }
+    });
 
-document.addEventListener('DOMContentLoaded', () => {
-  setupUI();
+    window.addEventListener('resize', onWindowResize, false);
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+init();
+renderer.setAnimationLoop((timestamp, frame) => {
+    renderer.render(scene, camera);
 });
