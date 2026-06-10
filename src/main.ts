@@ -2,11 +2,30 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three-stdlib';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 
+// Debug UI
+const debugDiv = document.createElement('div');
+debugDiv.style.position = 'absolute';
+debugDiv.style.top = '10px';
+debugDiv.style.left = '10px';
+debugDiv.style.color = 'white';
+debugDiv.style.backgroundColor = 'rgba(0,0,0,0.5)';
+debugDiv.style.padding = '10px';
+debugDiv.style.zIndex = '9999';
+document.body.appendChild(debugDiv);
+
+function log(msg: string) {
+    debugDiv.innerHTML += msg + '<br>';
+    console.log(msg);
+}
+
+log("Script caricato.");
+
 let camera: THREE.PerspectiveCamera;
 let scene: THREE.Scene;
 let renderer: THREE.WebGLRenderer;
 
 function init() {
+    log("Inizializzazione Three.js...");
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
@@ -20,31 +39,22 @@ function init() {
     renderer.xr.enabled = true;
     document.body.appendChild(renderer.domElement);
 
+    log("Aggiunta ARButton...");
     const button = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
     document.body.appendChild(button);
 
-// ... codice precedente ...
     const loader = new GLTFLoader();
-    // Usa un percorso relativo che Vite dovrebbe risolvere correttamente con 'base'
     const modelUrl = new URL('/assets/models/animated_butterfly_fucsia.glb', import.meta.url).href;
-    console.log("Tentativo di caricamento modello da:", modelUrl);
-    
+    log("Caricamento modello: " + modelUrl);
     loader.load(modelUrl, (gltf) => {
-        console.log("Modello caricato con successo!");
-        const butterfly = gltf.scene;
-// ... resto del codice ...
-
-    window.addEventListener('resize', onWindowResize, false);
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+        log("Modello caricato!");
+        scene.add(gltf.scene);
+    }, undefined, (error) => {
+        log("Errore caricamento: " + error.message);
+    });
 }
 
 init();
-
 renderer.setAnimationLoop((timestamp: number, frame: any) => {
     renderer.render(scene, camera);
 });
