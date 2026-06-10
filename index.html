@@ -4,20 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Ondulkart AR</title>
-    <!-- 8th Wall SDK -->
-    <script src="//apps.8thwall.com/xrweb?appKey=YOUR_APP_KEY"></script>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
     <style>
-      body, html { margin: 0; height: 100%; overflow: hidden; }
-      #camerafeed { width: 100%; height: 100%; }
-      #start-btn {
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        padding: 20px 40px; font-size: 24px; z-index: 9999;
-      }
+      body, html { margin: 0; height: 100%; overflow: hidden; background: black; }
+      #ios-view, #android-view { display: none; width: 100%; height: 100%; }
+      #start-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 40px; font-size: 24px; z-index: 9999; }
     </style>
   </head>
   <body>
-    <button id="start-btn">START AR</button>
-    <canvas id="camerafeed"></canvas>
+    <!-- iOS View (Quick Look) -->
+    <div id="ios-view">
+        <model-viewer src="./assets/models/animated_butterfly_fucsia.glb" ar ar-modes="quick-look" camera-controls></model-viewer>
+    </div>
+    
+    <!-- Android View (WebXR) -->
+    <div id="android-view">
+        <button id="start-btn">START AR</button>
+        <canvas id="camerafeed"></canvas>
+    </div>
     <script type="module" src="src/main.ts"></script>
   </body>
 </html>

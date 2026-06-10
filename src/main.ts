@@ -1,59 +1,43 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three-stdlib';
+import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 
-// Sciame: configurazione
-const BUTTERFLY_COUNT = 20;
-const butterflies: THREE.Group[] = [];
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-// Funzione per avviare l'AR
-const startExperience = () => {
-    document.getElementById('start-btn')!.style.display = 'none';
-    (window as any).XR8.run({ canvas: document.getElementById('camerafeed') });
-};
+if (isIOS) {
+    document.getElementById('ios-view')!.style.display = 'block';
+} else {
+    document.getElementById('android-view')!.style.display = 'block';
+    
+    // Logica WebXR (Android)
+    document.getElementById('start-btn')!.addEventListener('click', () => {
+        document.getElementById('start-btn')!.style.display = 'none';
+        startAndroidAR();
+    });
+}
 
-// Pipeline 8th Wall
-const onxrloaded = () => {
-    (window as any).XR8.addCameraPipelineModules([
-        (window as any).XR8.Threejs.xrPipelineModule(),
-        (window as any).XR8.XrController.xrPipelineModule(),
-        (window as any).XRExtras.AlmostThere.pipelineModule(),
-        (window as any).XRExtras.RuntimeError.pipelineModule(),
-        {
-            name: 'swarm-manager',
-            onStart: ({ canvas }) => {
-                const { scene, camera, renderer } = (window as any).XR8.Threejs.xrScene();
-                setupSwarm(scene);
-                
-                // Loop di animazione
-                renderer.setAnimationLoop(() => {
-                    animateSwarm();
-                    renderer.render(scene, camera);
-                });
-            }
-        }
-    ]);
-};
+function startAndroidAR() {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.getElementById('android-view')!.appendChild(renderer.domElement);
+    document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
-function setupSwarm(scene: THREE.Scene) {
+    const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+    scene.add(light);
+
     const loader = new GLTFLoader();
     loader.load('./assets/models/animated_butterfly_fucsia.glb', (gltf) => {
-        for (let i = 0; i < BUTTERFLY_COUNT; i++) {
+        for (let i = 0; i < 20; i++) {
             const b = gltf.scene.clone();
-            b.position.set(Math.random() * 10 - 5, Math.random() * 2 - 1, -Math.random() * 10 - 2);
+            b.position.set(Math.random() * 4 - 2, Math.random() * 2 - 1, -Math.random() * 5 - 2);
             scene.add(b);
-            butterflies.push(b);
         }
     });
-}
 
-function animateSwarm() {
-    butterflies.forEach(b => {
-        b.position.x -= 0.05; // Volo da destra a sinistra
-        if (b.position.x < -10) b.position.x = 10; // Reset posizione
+    renderer.setAnimationLoop(() => {
+        renderer.render(scene, camera);
     });
 }
-
-window.onload = () => {
-    document.getElementById('start-btn')!.addEventListener('click', startExperience);
-    (window as any).XR8 ? onxrloaded() : window.addEventListener('xrloaded', onxrloaded);
-};
